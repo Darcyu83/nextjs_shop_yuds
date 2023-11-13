@@ -1,113 +1,186 @@
-import Image from 'next/image'
+"use client";
+import Image from "next/image";
+
+import styles from "./page.module.css";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function Home() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const [canvasCtx, setCanvasCtx] = useState<CanvasRenderingContext2D | null>(
+    null
+  );
+
+  const [arrOfParticles, setArrOfParticles] = useState<Particle[]>([]);
+
+  const intervalId = useRef<NodeJS.Timeout>();
+  const incrementRef = useRef<number>(0);
+  const [increment, setIncrement] = useState(0);
+
+  const [mouseXY, setMouseXY] = useState<{
+    x: number | null;
+    y: number | null;
+  }>({
+    x: null,
+    y: null,
+  });
+
+  function drawRect(
+    ctx: CanvasRenderingContext2D | null,
+    x: number,
+    y: number
+  ) {
+    if (!ctx) return;
+    // 사각형
+    ctx.fillStyle = "white";
+    ctx.fillRect(x, y, 100, 20);
+  }
+
+  class Particle {
+    declare x: number;
+    declare y: number;
+    declare size: number;
+    declare speedX: number;
+    declare speedY: number;
+
+    constructor(x: number, y: number) {
+      this.x = x;
+      this.y = y;
+      this.size = Math.random() * 5 + 1;
+      this.speedX = Math.random() * 3 - 1.5;
+      this.speedY = Math.random() * 3 - 1.5;
+    }
+
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+    }
+
+    draw(ctx: CanvasRenderingContext2D | null) {
+      if (!ctx) return;
+      ctx.fillStyle = "blue";
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 3;
+      ctx.beginPath(); // 새로운 도형 : 전에 그린것과 분리
+      ctx.arc(this.x, this.y, 50, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  function initParticles() {
+    const arr: Particle[] = [];
+    for (let i = 0; i < 100; i++) {
+      arr.push(new Particle(mouseXY.x ?? 0, mouseXY.y ?? 0));
+    }
+
+    setArrOfParticles((curr) => [...curr, ...arr]);
+  }
+
+  // function drawCircle(
+  //   ctx: CanvasRenderingContext2D | null,
+  //   x: number,
+  //   y: number
+  // ) {
+  //   if (!ctx) return;
+  //   // 원
+  //   ctx.fillStyle = "blue";
+  //   ctx.strokeStyle = "red";
+  //   ctx.lineWidth = 3;
+  //   ctx.beginPath(); // 새로운 도형 : 전에 그린것과 분리
+  //   ctx.arc(x, y, 50, 0, Math.PI * 2);
+  //   ctx.fill();
+  //   ctx.stroke();
+  // }
+
+  // const animateCircle = useCallback(() => {
+  //   if (!canvasCtx) return;
+  //   canvasCtx?.clearRect(
+  //     0,
+  //     0,
+  //     canvasRef.current?.width ?? 0,
+  //     canvasRef.current?.height ?? 0
+  //   );
+
+  //   if (!mouseXY.x || !mouseXY.y) return;
+
+  //   drawCircle(canvasCtx, mouseXY.x, mouseXY.y);
+  // }, [canvasCtx, mouseXY.x, mouseXY.y]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas) return;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const ctx = canvas.getContext("2d");
+    setCanvasCtx(ctx);
+
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+
+    // 클릭 이벤트
+    canvas.addEventListener("click", (e) => {
+      setMouseXY({ x: e.x, y: e.y });
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      setMouseXY({ x: e.x, y: e.y });
+    });
+
+    initParticles();
+  }, []);
+
+  useEffect(() => {
+    intervalId.current = setInterval(() => {
+      incrementRef.current += 1;
+
+      if (incrementRef.current === 3000) {
+        clearInterval(intervalId.current);
+        return;
+      }
+      setIncrement(incrementRef.current);
+    }, 1);
+
+    return () => {
+      clearInterval(intervalId.current);
+    };
+  }, [increment]);
+
+  // 마우스 이동 :: 원 따라다니게
+  useEffect(() => {
+    // animateCircle();
+
+    if (!canvasCtx) return;
+    canvasCtx?.clearRect(
+      0,
+      0,
+      canvasRef.current?.width ?? 0,
+      canvasRef.current?.height ?? 0
+    );
+    arrOfParticles.map((particle) => {
+      particle.update();
+      particle.draw(canvasCtx);
+    });
+  }, [arrOfParticles, canvasCtx, mouseXY.x, mouseXY.y, increment]);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+      {/* Glassmorphism */}
+
+      <div className={styles.glass_container}>
+        haha
+        <div className={styles.glass_card}></div>
       </div>
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+      <canvas
+        ref={canvasRef}
+        id="tutorial"
+        className={styles.canvas_tutorial}
+      ></canvas>
     </main>
-  )
+  );
 }
